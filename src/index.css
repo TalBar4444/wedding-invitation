@@ -1,0 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Hebrew:wght@300;400&family=Frank+Ruhl+Libre:wght@300;400;500;700&family=Cormorant+Garamond:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+html,
+body {
+  margin: 0;
+}
