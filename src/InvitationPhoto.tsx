@@ -4,6 +4,7 @@ import { toPng } from 'html-to-image';
 // Olive ink sampled from couple-olive.png, shifted a little greener so it reads as sage on the paper.
 const OLIVE = '#3f4a2c';
 const GOLD = '#98753f';
+const MENU_LINE_GOLD = '#c29450';
 const NAVY = '#1A365D';
 const SERIF = "'Noto Serif Hebrew', 'Frank Ruhl Libre', serif";
 const MENU_SERIF = "'Frank Ruhl Libre', 'Noto Serif Hebrew', serif";
@@ -235,7 +236,7 @@ function MenuMonogram() {
         >
           MENU
         </p>
-        <span aria-hidden style={{ width: 128, height: 1, background: GOLD, marginTop: 10 }} />
+        <span aria-hidden style={{ width: 128, height: 2, background: MENU_LINE_GOLD, marginTop: 10 }} />
       </div>
     </>
   );
@@ -375,6 +376,21 @@ function MenuOverlay({ variant }: { variant: 'menu' | 'starters' }) {
       style={{ color: NAVY, fontFamily: MENU_SERIF }}
     >
       {variant === 'starters' && <MenuMonogram />}
+      {variant === 'menu' && (
+        <span
+          aria-hidden
+          className="absolute"
+          style={{
+            top: 259,
+            left: 0,
+            right: 0,
+            marginInline: 'auto',
+            width: 128,
+            height: 2,
+            background: MENU_LINE_GOLD,
+          }}
+        />
+      )}
       {variant === 'starters' ? (
         <>
           <p
