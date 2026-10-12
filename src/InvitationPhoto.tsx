@@ -8,6 +8,8 @@ const GOLD = '#98753f';
 const MENU_LINE_GOLD = '#c29450';
 const NAVY = '#1A365D';
 const LOGO_BURGUNDY = '#94160c';
+/** Ink sampled from the henna invitation frame so the type matches the border. */
+const HENNA_RED = '#ee1a0e';
 const SERIF = "'Noto Serif Hebrew', 'Frank Ruhl Libre', serif";
 const MENU_SERIF = "'Frank Ruhl Libre', 'Noto Serif Hebrew', serif";
 
@@ -20,7 +22,7 @@ const CANON_RIGHT = { w: 248, h: 400 };
 const CANON_SINGLE = { w: 600, h: 980 };
 
 type Face = { cx: number; cy: number; rot: number; scale: number };
-type LayoutId = 'landscape' | 'portrait' | 'single' | 'menu' | 'starters' | 'cocktails' | 'qr';
+type LayoutId = 'landscape' | 'portrait' | 'single' | 'menu' | 'starters' | 'cocktails' | 'qr' | 'henna';
 type BaseLayout = {
   id: LayoutId;
   label: string;
@@ -34,7 +36,8 @@ type MenuLayout = BaseLayout & { id: 'menu' };
 type StartersLayout = BaseLayout & { id: 'starters' };
 type CocktailsLayout = BaseLayout & { id: 'cocktails' };
 type QrLayout = BaseLayout & { id: 'qr' };
-type Layout = TwoCardLayout | SingleCardLayout | MenuLayout | StartersLayout | CocktailsLayout | QrLayout;
+type HennaLayout = BaseLayout & { id: 'henna' };
+type Layout = TwoCardLayout | SingleCardLayout | MenuLayout | StartersLayout | CocktailsLayout | QrLayout | HennaLayout;
 
 /** Cocktail card is a short, narrow brochure, not the full menu sheet. */
 const COCKTAIL_W = 760;
@@ -96,6 +99,13 @@ const LAYOUTS: Record<LayoutId, Layout> = {
     src: '/hena_bg.png',
     w: 1672,
     h: 941,
+  },
+  henna: {
+    id: 'henna',
+    label: 'הזמנת חינה',
+    src: '/henna_invetation_bg.png?v=pendant',
+    w: 1024,
+    h: 1360,
   },
 };
 
@@ -564,6 +574,97 @@ function HennaLogo({ width }: { width: number }) {
   );
 }
 
+function HennaFlower({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden style={{ display: 'block', flexShrink: 0 }}>
+      <g transform="translate(14 14)">
+        {Array.from({ length: 8 }, (_, i) => (
+          <ellipse key={i} cx="0" cy="-7" rx="2.4" ry="6.2" fill={HENNA_RED} transform={`rotate(${i * 45})`} />
+        ))}
+        <circle r="2.4" fill="#f7eedb" />
+      </g>
+    </svg>
+  );
+}
+
+function HennaRule() {
+  return (
+    <div className="flex items-center" style={{ width: 210, gap: 12 }} aria-hidden>
+      <span className="h-px flex-1" style={{ background: HENNA_RED, opacity: 0.7 }} />
+      <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden>
+        <path d="M4.5 0.4 L5.25 3.75 L8.6 4.5 L5.25 5.25 L4.5 8.6 L3.75 5.25 L0.4 4.5 L3.75 3.75 Z" fill={HENNA_RED} />
+      </svg>
+      <span className="h-px flex-1" style={{ background: HENNA_RED, opacity: 0.7 }} />
+    </div>
+  );
+}
+
+function HennaInvitationOverlay() {
+  const latin: CSSProperties = {
+    fontFamily: "'Cormorant Garamond', serif",
+    fontWeight: 500,
+    letterSpacing: '0.02em',
+  };
+
+  return (
+    <div
+      dir="rtl"
+      className="absolute inset-0 flex flex-col items-center text-center"
+      style={{
+        color: HENNA_RED,
+        fontFamily: MENU_SERIF,
+        paddingTop: 404,
+        paddingBottom: 72,
+        justifyContent: 'flex-start',
+        gap: 48,
+        zIndex: 2,
+      }}
+    >
+      <div className="flex flex-col items-center">
+        <p style={{ fontSize: 56, fontWeight: 500, letterSpacing: '0.04em', lineHeight: 1.15, color: LOGO_BURGUNDY }}>
+          טקס החינה
+        </p>
+        <div className="flex items-center" style={{ gap: 16, marginTop: 10 }}>
+          <HennaFlower />
+          <h1 style={{ fontSize: 92, fontWeight: 500, letterSpacing: '0.02em', lineHeight: 1, color: LOGO_BURGUNDY }}>
+            טל ושקד
+          </h1>
+          <HennaFlower />
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center" style={{ gap: 14 }}>
+        <p style={{ fontSize: 36, fontWeight: 400, letterSpacing: '0.02em', lineHeight: 1.25, transform: 'translateY(-22px)' }}>
+          מתרגשים להזמין אתכם לחגוג איתנו
+        </p>
+        <HennaRule />
+        <div style={{ lineHeight: 1.3, fontFamily: SERIF }}>
+          <p style={{ fontSize: 36, fontWeight: 400, letterSpacing: '0.02em' }}>יום שלישי, ב׳ בחשון התשפ״ז</p>
+          <p dir="ltr" style={{ fontSize: 42, fontWeight: 400, letterSpacing: '0.12em', marginTop: 2 }}>
+            13.10.2026
+          </p>
+        </div>
+        <HennaRule />
+        <div style={{ lineHeight: 1.3 }}>
+          <p style={{ fontSize: 44, fontWeight: 500, letterSpacing: '0.03em' }}>
+            <span dir="ltr" style={{ ...latin, fontSize: 46, unicodeBidi: 'isolate' }}>
+              LEO
+            </span>{' '}
+            <span style={{ unicodeBidi: 'isolate' }}>אירועים</span>
+          </p>
+          <p style={{ fontSize: 32, fontWeight: 400, letterSpacing: '0.02em', marginTop: 4 }}>
+            ברשבסקי 12, ראשון לציון
+          </p>
+        </div>
+        <HennaRule />
+        <p style={{ fontSize: 36, fontWeight: 400, letterSpacing: '0.02em', transform: 'translateY(22px)' }}>קבלת פנים בשעה 19:30</p>
+      </div>
+
+      <HennaLogo width={136} />
+    </div>
+  );
+}
+
 function QrOverlay() {
   return (
     <div
@@ -578,18 +679,21 @@ function QrOverlay() {
       }}
     >
       <HennaLogo width={176} />
-      <h1
-        style={{
-          marginTop: 28,
-          fontSize: 68,
-          fontWeight: 500,
-          letterSpacing: '0.01em',
-          lineHeight: 1.2,
-          color: LOGO_BURGUNDY,
-        }}
-      >
-        החינה של טל ושקד
-      </h1>
+      <div className="flex items-center" style={{ gap: 22, marginTop: 28 }}>
+        <HennaFlower size={40} />
+        <h1
+          style={{
+            fontSize: 68,
+            fontWeight: 500,
+            letterSpacing: '0.01em',
+            lineHeight: 1.2,
+            color: LOGO_BURGUNDY,
+          }}
+        >
+          החינה של טל ושקד
+        </h1>
+        <HennaFlower size={40} />
+      </div>
       <img
         src="/qrcode_hena.app.link.png"
         alt="קוד QR למתנה בפייבוקס"
@@ -941,7 +1045,7 @@ function InvitationCopy({
 export default function InvitationPhoto() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState<LayoutId>('qr');
+  const [view, setView] = useState<LayoutId>('henna');
   const [scale, setScale] = useState(1);
   const [busy, setBusy] = useState(false);
   const layout = LAYOUTS[view];
@@ -973,7 +1077,9 @@ export default function InvitationPhoto() {
       a.download =
         layout.id === 'qr'
           ? 'hena-paybox.png'
-          : layout.id === 'menu'
+          : layout.id === 'henna'
+            ? 'henna-invitation.png'
+            : layout.id === 'menu'
             ? 'menu.png'
             : layout.id === 'starters'
               ? 'menu-starters.png'
@@ -1021,14 +1127,37 @@ export default function InvitationPhoto() {
               style={{
                 width: layout.w,
                 height: layout.h,
-                background:
-                  layout.id === 'cocktails'
-                    ? PAPER
-                    : `url(${layout.src}) center / ${layout.id === 'single' ? 'cover' : '100% 100%'} no-repeat`,
+                ...(layout.id === 'henna'
+                  ? {
+                      backgroundColor: '#f7eedb',
+                      backgroundImage: `url(${layout.src})`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'bottom center',
+                      backgroundSize: '100% auto',
+                    }
+                  : {
+                      background:
+                        layout.id === 'cocktails'
+                          ? PAPER
+                          : `url(${layout.src}) center / ${layout.id === 'single' ? 'cover' : '100% 100%'} no-repeat`,
+                    }),
               }}
             >
               {layout.id === 'qr' ? (
                 <QrOverlay />
+              ) : layout.id === 'henna' ? (
+                <>
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 top-0"
+                    style={{
+                      height: 640,
+                      background: `url(${layout.src}) top center / 100% auto no-repeat`,
+                      zIndex: 1,
+                    }}
+                  />
+                  <HennaInvitationOverlay />
+                </>
               ) : layout.id === 'menu' || layout.id === 'starters' || layout.id === 'cocktails' ? (
                 <MenuOverlay variant={layout.id} />
               ) : layout.id === 'single' ? (
