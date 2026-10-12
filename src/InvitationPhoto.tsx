@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { GiGlassCelebration, GiMartini, GiWineGlass } from 'react-icons/gi';
 import { toPng } from 'html-to-image';
 
 // Olive ink sampled from couple-olive.png, shifted a little greener so it reads as sage on the paper.
@@ -6,6 +7,7 @@ const OLIVE = '#3f4a2c';
 const GOLD = '#98753f';
 const MENU_LINE_GOLD = '#c29450';
 const NAVY = '#1A365D';
+const LOGO_BURGUNDY = '#94160c';
 const SERIF = "'Noto Serif Hebrew', 'Frank Ruhl Libre', serif";
 const MENU_SERIF = "'Frank Ruhl Libre', 'Noto Serif Hebrew', serif";
 
@@ -18,7 +20,7 @@ const CANON_RIGHT = { w: 248, h: 400 };
 const CANON_SINGLE = { w: 600, h: 980 };
 
 type Face = { cx: number; cy: number; rot: number; scale: number };
-type LayoutId = 'landscape' | 'portrait' | 'single' | 'menu' | 'starters';
+type LayoutId = 'landscape' | 'portrait' | 'single' | 'menu' | 'starters' | 'cocktails' | 'qr';
 type BaseLayout = {
   id: LayoutId;
   label: string;
@@ -30,7 +32,14 @@ type TwoCardLayout = BaseLayout & { id: 'landscape' | 'portrait'; left: Face; ri
 type SingleCardLayout = BaseLayout & { id: 'single'; card: Face };
 type MenuLayout = BaseLayout & { id: 'menu' };
 type StartersLayout = BaseLayout & { id: 'starters' };
-type Layout = TwoCardLayout | SingleCardLayout | MenuLayout | StartersLayout;
+type CocktailsLayout = BaseLayout & { id: 'cocktails' };
+type QrLayout = BaseLayout & { id: 'qr' };
+type Layout = TwoCardLayout | SingleCardLayout | MenuLayout | StartersLayout | CocktailsLayout | QrLayout;
+
+/** Cocktail card is a short, narrow brochure, not the full menu sheet. */
+const COCKTAIL_W = 760;
+const COCKTAIL_H = 1000;
+const PAPER = '#FBF8F2';
 
 const LAYOUTS: Record<LayoutId, Layout> = {
   landscape: {
@@ -74,6 +83,20 @@ const LAYOUTS: Record<LayoutId, Layout> = {
     w: 1024,
     h: 1536,
   },
+  cocktails: {
+    id: 'cocktails',
+    label: 'קוקטיילים',
+    src: '/menu-blank.png',
+    w: COCKTAIL_W,
+    h: COCKTAIL_H,
+  },
+  qr: {
+    id: 'qr',
+    label: 'חינה',
+    src: '/hena_bg.png',
+    w: 1672,
+    h: 941,
+  },
 };
 
 const MENU_TS_SCALE = 0.55;
@@ -91,6 +114,39 @@ const STARTERS = [
   'קרפצ׳יו חציל',
   'מסבחה רכה ומלטפת',
   'פלטת מטבלים ולחם הבית',
+];
+
+const COCKTAILS: { name: string; lines: string[][] }[] = [
+  {
+    name: 'גרין וולוט',
+    lines: [
+      ['ג׳ין', 'ליקר פרחי סמבוק', 'מחית קיווי'],
+      ['סירופ מלפפון', 'בזיליקום'],
+    ],
+  },
+  {
+    name: 'ספייסי סול',
+    lines: [
+      ['טקילה', 'מחית מנגו', 'סירופ פסיפלורה'],
+      ['סירופ דבש', 'צ׳ילי', 'מיץ ליים'],
+    ],
+  },
+  {
+    name: 'פינק מרטיני',
+    lines: [
+      ['ג׳ין', 'מרטיני ביאנקו'],
+      ['אשכולית אדומה', 'ליקר הדרים'],
+    ],
+  },
+];
+
+const COCKTAIL_SCATTER: { kind: 'martini' | 'wine' | 'cheers'; x: number; y: number; size: number; rot: number }[] = [
+  { kind: 'martini', x: 668, y: 24, size: 64, rot: 14 },
+  { kind: 'cheers', x: 10, y: 198, size: 62, rot: -8 },
+  { kind: 'wine', x: 678, y: 300, size: 58, rot: -10 },
+  { kind: 'martini', x: 15, y: 530, size: 62, rot: 8 },
+  { kind: 'cheers', x: 678, y: 548, size: 60, rot: 6 },
+  { kind: 'wine', x: 10, y: 850, size: 58, rot: -12 },
 ];
 
 const MENU_DISHES: { name: string; lines: string[] }[] = [
@@ -156,6 +212,7 @@ function BlankCrop({
   srcTop,
   scale,
   zIndex,
+  pageW = 1024,
 }: {
   boxTop: number;
   boxW: number;
@@ -163,6 +220,7 @@ function BlankCrop({
   srcTop: number;
   scale: number;
   zIndex?: number;
+  pageW?: number;
 }) {
   const srcLeft = (1024 - boxW) / 2;
   const imgStyle: CSSProperties = {
@@ -180,7 +238,7 @@ function BlankCrop({
       className="absolute overflow-hidden"
       style={{
         top: boxTop,
-        left: srcLeft,
+        left: (pageW - boxW) / 2,
         width: boxW,
         height: boxH,
         transform: `scale(${scale})`,
@@ -190,6 +248,76 @@ function BlankCrop({
     >
       <img src="/menu-blank.png" alt="" style={imgStyle} />
     </div>
+  );
+}
+
+function PaperPatch({ top, left, width, height }: { top: number; left: number; width: number; height: number }) {
+  return (
+    <div aria-hidden className="absolute overflow-hidden" style={{ top, left, width, height, zIndex: 1 }}>
+      <img
+        src="/menu-blank.png"
+        alt=""
+        style={{
+          position: 'absolute',
+          width: 1024,
+          height: 1536,
+          maxWidth: 'none',
+          maxHeight: 'none',
+          left: -420,
+          top: -700,
+        }}
+      />
+    </div>
+  );
+}
+
+function HeartRule({ top }: { top: number }) {
+  return (
+    <div
+      aria-hidden
+      className="absolute flex items-center justify-center"
+      style={{ top, left: 0, right: 0, zIndex: 3, gap: 12 }}
+    >
+      <span style={{ width: 188, height: 2, background: MENU_LINE_GOLD }} />
+      <svg width="32" height="28" viewBox="0 0 16 14">
+        <path
+          d="M8 12.4S2.2 8.6 2.2 5.2C2.2 3.2 3.7 2 5.2 2c.9 0 1.7.4 2.2 1.2C7.9 2.4 8.7 2 9.6 2c1.5 0 3 1.2 3 3.2 0 3.4-4.6 7.2-4.6 7.2z"
+          fill={MENU_LINE_GOLD}
+        />
+      </svg>
+      <span style={{ width: 188, height: 2, background: MENU_LINE_GOLD }} />
+    </div>
+  );
+}
+
+function CocktailPaper() {
+  const cropX = (1024 - COCKTAIL_W) / 2;
+  const frame: CSSProperties = {
+    position: 'absolute',
+    width: 1024,
+    height: 1536,
+    maxWidth: 'none',
+    maxHeight: 'none',
+  };
+  return (
+    <>
+      <div aria-hidden className="absolute overflow-hidden" style={{ top: 0, left: 0, width: COCKTAIL_W, height: 420, zIndex: 0 }}>
+        <img src="/menu-blank.png" alt="" style={{ ...frame, left: -cropX, top: 0 }} />
+      </div>
+      <div aria-hidden className="absolute overflow-hidden" style={{ right: 0, bottom: 0, width: 240, height: 320, zIndex: 0 }}>
+        <img src="/menu-blank.png" alt="" style={{ ...frame, right: 0, bottom: 0 }} />
+      </div>
+    </>
+  );
+}
+
+function CocktailLogo() {
+  const coverW = 284;
+  return (
+    <>
+      <PaperPatch top={0} left={(COCKTAIL_W - coverW) / 2} width={coverW} height={378} />
+      <BlankCrop boxTop={26} boxW={280} boxH={250} srcTop={18} scale={0.64} zIndex={2} pageW={COCKTAIL_W} />
+    </>
   );
 }
 
@@ -263,30 +391,34 @@ function CoupleMark({ height }: { height: number }) {
   );
 }
 
-function MenuFooter() {
+function MenuFooter({ large = false, top }: { large?: boolean; top?: number }) {
+  const nameSize = large ? 46 : 32;
+  const dateSize = large ? 34 : 24;
+  const ampSize = large ? 40 : 28;
   return (
     <div
       className="absolute flex items-center justify-center"
       dir="ltr"
       style={{
-        top: 1370,
+        top: top ?? (large ? 1356 : 1370),
         left: 0,
         right: 0,
         gap: 18,
         fontFamily: MENU_SERIF,
         color: NAVY,
+        zIndex: 4,
       }}
     >
       <span style={{ transform: 'translateX(-28px)' }}>
         <CoupleMark height={MENU_COUPLE_HEIGHT} />
       </span>
       <div dir="rtl" className="flex flex-col items-center">
-        <p className="flex items-baseline justify-center" style={{ fontSize: 32, fontWeight: 500, gap: 10, letterSpacing: '0.08em' }}>
+        <p className="flex items-baseline justify-center" style={{ fontSize: nameSize, fontWeight: 500, gap: 10, letterSpacing: '0.08em' }}>
           <span>טל</span>
-          <Ampersand size={28} />
+          <Ampersand size={ampSize} />
           <span>שקד</span>
         </p>
-        <p dir="ltr" style={{ fontSize: 24, fontWeight: 500, letterSpacing: '0.3em', marginTop: 6 }}>
+        <p dir="ltr" style={{ fontSize: dateSize, fontWeight: 500, letterSpacing: '0.3em', marginTop: 6 }}>
           29.10.2026
         </p>
       </div>
@@ -358,7 +490,133 @@ function StarterList({ top, fontSize }: { top: number; fontSize: number }) {
   );
 }
 
-function MenuOverlay({ variant }: { variant: 'menu' | 'starters' }) {
+function CocktailMark({ kind, size }: { kind: 'martini' | 'wine' | 'cheers'; size: number }) {
+  const Icon = kind === 'martini' ? GiMartini : kind === 'wine' ? GiWineGlass : GiGlassCelebration;
+  return <Icon size={size} color={GOLD} aria-hidden />;
+}
+
+function ScatteredCocktails() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0" style={{ zIndex: 1 }}>
+      {COCKTAIL_SCATTER.map((mark) => (
+        <span
+          key={`${mark.x}-${mark.y}`}
+          className="absolute"
+          style={{ left: mark.x, top: mark.y, transform: `rotate(${mark.rot}deg)` }}
+        >
+          <CocktailMark kind={mark.kind} size={mark.size} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function CocktailList() {
+  return (
+    <div
+      className="absolute flex flex-col items-center"
+      style={{ top: 324, left: 0, right: 0, marginInline: 'auto', width: 540, zIndex: 4, gap: 40 }}
+    >
+      {COCKTAILS.map((drink) => (
+        <div key={drink.name} className="flex flex-col items-center" style={{ width: '100%' }}>
+          <h2 style={{ fontSize: 44, fontWeight: 500, letterSpacing: '0.03em', lineHeight: 1.15 }}>
+            {drink.name}
+          </h2>
+          <div className="flex flex-col items-center" style={{ marginTop: 6, gap: 2 }}>
+            {drink.lines.map((line) => (
+              <p
+                key={line.join('|')}
+                className="flex flex-nowrap items-center justify-center"
+                style={{ fontSize: 22, fontWeight: 400, letterSpacing: '0.02em', lineHeight: 1.35 }}
+              >
+                {line.map((item, i) => (
+                  <span key={item} style={{ whiteSpace: 'nowrap' }}>
+                    {item}
+                    {i < line.length - 1 && (
+                      <span style={{ color: GOLD, margin: '0 8px', fontWeight: 500 }} aria-hidden>
+                        |
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </p>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HennaLogo({ width }: { width: number }) {
+  const height = width * (328 / 306);
+  return (
+    <img
+      src="/logo-henna.png?v=user"
+      alt="T&S"
+      style={{
+        width,
+        height,
+        maxWidth: 'none',
+        display: 'block',
+      }}
+    />
+  );
+}
+
+function QrOverlay() {
+  return (
+    <div
+      dir="rtl"
+      className="absolute inset-0 flex flex-col items-center text-center"
+      style={{
+        color: LOGO_BURGUNDY,
+        fontFamily: MENU_SERIF,
+        paddingTop: 52,
+        paddingBottom: 64,
+        zIndex: 2,
+      }}
+    >
+      <HennaLogo width={176} />
+      <h1
+        style={{
+          marginTop: 28,
+          fontSize: 68,
+          fontWeight: 500,
+          letterSpacing: '0.01em',
+          lineHeight: 1.2,
+          color: LOGO_BURGUNDY,
+        }}
+      >
+        החינה של טל ושקד
+      </h1>
+      <img
+        src="/qrcode_hena.app.link.png"
+        alt="קוד QR למתנה בפייבוקס"
+        style={{
+          width: 360,
+          height: 360,
+          display: 'block',
+          marginTop: 16,
+          mixBlendMode: 'multiply',
+        }}
+      />
+      <p
+        style={{
+          marginTop: 4,
+          fontSize: 44,
+          fontWeight: 400,
+          letterSpacing: '0.06em',
+          color: LOGO_BURGUNDY,
+        }}
+      >
+        למתנה בפייבוקס, סרקו כאן
+      </p>
+    </div>
+  );
+}
+
+function MenuOverlay({ variant }: { variant: 'menu' | 'starters' | 'cocktails' }) {
   const intro = (
     <>
       אורחים יקרים
@@ -391,7 +649,31 @@ function MenuOverlay({ variant }: { variant: 'menu' | 'starters' }) {
           }}
         />
       )}
-      {variant === 'starters' ? (
+      {variant === 'cocktails' ? (
+        <>
+          <CocktailPaper />
+          <CocktailLogo />
+          <h1
+            className="absolute"
+            style={{
+              top: 214,
+              left: 0,
+              right: 0,
+              fontSize: 52,
+              fontWeight: 500,
+              letterSpacing: '0.04em',
+              lineHeight: 1.1,
+              zIndex: 4,
+            }}
+          >
+            קוקטיילים
+          </h1>
+          <HeartRule top={286} />
+          <HeartRule top={780} />
+          <ScatteredCocktails />
+          <CocktailList />
+        </>
+      ) : variant === 'starters' ? (
         <>
           <p
             className="absolute"
@@ -470,7 +752,7 @@ function MenuOverlay({ variant }: { variant: 'menu' | 'starters' }) {
           </div>
         </>
       )}
-      <MenuFooter />
+      <MenuFooter top={variant === 'cocktails' ? 828 : undefined} />
     </div>
   );
 }
@@ -500,14 +782,14 @@ const ink: CSSProperties = {
   textShadow: '0 0 0.5px rgba(63,74,44,0.45)',
 };
 
-function Ampersand({ size = 34 }: { size?: number }) {
+function Ampersand({ size = 34, color = GOLD }: { size?: number; color?: string }) {
   return (
     <span
       dir="ltr"
       className="italic"
       style={{
         fontFamily: "'Cormorant Garamond', serif",
-        color: GOLD,
+        color,
         fontWeight: 500,
         fontSize: size,
       }}
@@ -659,7 +941,7 @@ function InvitationCopy({
 export default function InvitationPhoto() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState<LayoutId>('menu');
+  const [view, setView] = useState<LayoutId>('qr');
   const [scale, setScale] = useState(1);
   const [busy, setBusy] = useState(false);
   const layout = LAYOUTS[view];
@@ -689,7 +971,15 @@ export default function InvitationPhoto() {
       });
       const a = document.createElement('a');
       a.download =
-        layout.id === 'menu' ? 'menu.png' : layout.id === 'starters' ? 'menu-starters.png' : `invitation-${layout.id}.png`;
+        layout.id === 'qr'
+          ? 'hena-paybox.png'
+          : layout.id === 'menu'
+            ? 'menu.png'
+            : layout.id === 'starters'
+              ? 'menu-starters.png'
+              : layout.id === 'cocktails'
+                ? 'menu-cocktails.png'
+                : `invitation-${layout.id}.png`;
       a.href = dataUrl;
       a.click();
     } finally {
@@ -698,8 +988,8 @@ export default function InvitationPhoto() {
   }
 
   return (
-    <main className="relative min-h-screen bg-[#e9dfcf] px-2 py-14 sm:px-6">
-      <div className="fixed left-4 top-4 z-10 flex flex-wrap gap-2">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#e9dfcf] px-2 pb-14 pt-28 sm:px-6">
+      <div className="fixed inset-x-4 top-4 z-10 flex flex-wrap gap-2">
         {(Object.keys(LAYOUTS) as LayoutId[]).map((id) => (
           <button
             key={id}
@@ -712,17 +1002,17 @@ export default function InvitationPhoto() {
             {LAYOUTS[id].label}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={busy}
+          className="ms-auto rounded-full bg-[#3c3a28] px-5 py-2 text-sm font-semibold text-[#f6efe0] shadow-lg transition hover:bg-[#4d4a34] disabled:opacity-60"
+        >
+          {busy ? 'Exporting…' : 'Download PNG'}
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={handleExport}
-        disabled={busy}
-        className="fixed right-4 top-4 z-10 rounded-full bg-[#3c3a28] px-5 py-2 text-sm font-semibold text-[#f6efe0] shadow-lg transition hover:bg-[#4d4a34] disabled:opacity-60"
-      >
-        {busy ? 'Exporting…' : 'Download PNG'}
-      </button>
 
-      <div ref={wrapRef} className="mx-auto w-full" style={{ maxWidth: layout.w }}>
+      <div ref={wrapRef} className="mx-auto w-full overflow-hidden" style={{ maxWidth: layout.w }}>
         <div style={{ height: layout.h * scale }}>
           <div style={{ width: layout.w, height: layout.h, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
             <div
@@ -731,10 +1021,15 @@ export default function InvitationPhoto() {
               style={{
                 width: layout.w,
                 height: layout.h,
-                background: `url(${layout.src}) center / ${layout.id === 'single' ? 'cover' : '100% 100%'} no-repeat`,
+                background:
+                  layout.id === 'cocktails'
+                    ? PAPER
+                    : `url(${layout.src}) center / ${layout.id === 'single' ? 'cover' : '100% 100%'} no-repeat`,
               }}
             >
-              {layout.id === 'menu' || layout.id === 'starters' ? (
+              {layout.id === 'qr' ? (
+                <QrOverlay />
+              ) : layout.id === 'menu' || layout.id === 'starters' || layout.id === 'cocktails' ? (
                 <MenuOverlay variant={layout.id} />
               ) : layout.id === 'single' ? (
                 <div
